@@ -6,6 +6,7 @@
   <img src="https://img.shields.io/badge/skill-agent--plan-0B7285?style=for-the-badge" alt="agent-plan skill">
   <img src="https://img.shields.io/badge/for-Claude%20%7C%20Codex-2F9E44?style=for-the-badge" alt="for Claude and Codex">
   <img src="https://img.shields.io/badge/output-AI%20readable%20plan%20tree-CF1322?style=for-the-badge" alt="AI readable plan tree">
+  <img src="https://img.shields.io/badge/release-v1.0.0-2F9E44?style=for-the-badge" alt="release v1.0.0">
 </p>
 
 [![Provider](https://img.shields.io/badge/provider-Claude%20%7C%20Codex-lightgrey.svg)]()
@@ -173,7 +174,7 @@ docs/agent-plan/
 
 ```bash
 mkdir -p "$CODEX_HOME/skills"
-git clone https://github.com/YOUR_NAME/agent-plan.git "$CODEX_HOME/skills/agent-plan"
+git clone https://github.com/2270525352/Agent-Plan.git "$CODEX_HOME/skills/agent-plan"
 ```
 
 Claude Code 用户：把整个 skill 目录复制到对应的 Claude skills 位置即可。

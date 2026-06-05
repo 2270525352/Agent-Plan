@@ -1,5 +1,7 @@
 # Agent-Plan
 
+[![release](https://img.shields.io/badge/release-v1.0.0-2F9E44.svg)](https://github.com/2270525352/Agent-Plan) [![for](https://img.shields.io/badge/for-Claude%20%7C%20Codex-lightgrey.svg)]()
+
 **English** | [中文](README.zh-CN.md)
 
 Agent-Plan is a Codex/Claude skill for building strict AI-readable planning trees that a **single AI** (one Claude window or one Codex window) executes autonomously via `/goal` — without drifting from the user's real intent.
@@ -34,7 +36,7 @@ Clone this directory into your skills directory:
 
 ```bash
 mkdir -p "$CODEX_HOME/skills"
-git clone https://github.com/YOUR_NAME/agent-plan.git "$CODEX_HOME/skills/agent-plan"
+git clone https://github.com/2270525352/Agent-Plan.git "$CODEX_HOME/skills/agent-plan"
 ```
 
 For Claude Code, copy the skill directory to the provider-specific skills folder.
