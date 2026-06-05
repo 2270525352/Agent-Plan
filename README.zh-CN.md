@@ -126,7 +126,7 @@ docs/agent-plan/
   09-git/           Git提交纪律.md  提交检查表.md
 ```
 
-每一层对应的模板见 [`templates/`](templates/)。
+每一层对应的模板见 [`templates/`](templates/);一份**填好的样板**(小项目 `local-todo-cli`)见 [`examples/`](examples/),直接看「填好长啥样」。
 
 <details>
 <summary><b>各层目录职责</b></summary>

@@ -67,4 +67,4 @@ docs/agent-plan/
   09-git/           Git提交纪律.md  提交检查表.md
 ```
 
-See `templates/` for the document formats used by the skill.
+See `templates/` for the document formats, and `examples/` for a **filled** sample tree (a small `local-todo-cli` project) showing what good output looks like.
