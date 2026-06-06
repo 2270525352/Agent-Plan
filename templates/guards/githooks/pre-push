@@ -1,0 +1,17 @@
+#!/bin/sh
+# Agent-Plan pre-push hook (Claude & Codex): never push to main/master.
+# The main branch is merged by a human; planning and execution both run on a
+# dedicated feature branch. Bypass with AGENT_PLAN_SKIP_HOOKS=1 (emergencies only).
+[ "${AGENT_PLAN_SKIP_HOOKS:-}" = "1" ] && exit 0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/master)
+      echo "[agent-plan] push 被拒:禁止直接 push 到 ${remote_ref}。" >&2
+      echo "  规划 / 执行都走专用功能分支,主分支由人来合。" >&2
+      echo "  紧急绕过: AGENT_PLAN_SKIP_HOOKS=1 git push ..." >&2
+      exit 1
+      ;;
+  esac
+done
+exit 0

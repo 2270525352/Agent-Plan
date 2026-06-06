@@ -1,0 +1,24 @@
+#!/bin/sh
+# Agent-Plan commit-msg hook (Claude & Codex):
+# enforce "<任务编号> (<AI 名字>): <一句话简述>", e.g. "T-P0-0001 (Codex): 实现接口兼容层".
+# Bypass with AGENT_PLAN_SKIP_HOOKS=1 (emergencies only).
+[ "${AGENT_PLAN_SKIP_HOOKS:-}" = "1" ] && exit 0
+
+first_line=$(head -n1 "$1")
+
+# Allow merges / reverts / fixup / squash.
+case "$first_line" in
+  Merge*|Revert*|"fixup!"*|"squash!"*) exit 0 ;;
+esac
+
+# Required shape: <token> (Claude|Codex): <summary>
+if printf '%s' "$first_line" | grep -Eq '^[^ ]+ \((Claude|Codex)\): .+'; then
+  exit 0
+fi
+
+echo "[agent-plan] 提交被拒:提交信息不符合纪律格式。" >&2
+echo "  需要: <任务编号> (<AI 名字>): <一句话简述>" >&2
+echo "  例如: T-P0-0001 (Codex): 实现接口兼容层" >&2
+echo "  当前: $first_line" >&2
+echo "  紧急绕过: AGENT_PLAN_SKIP_HOOKS=1 git commit ..." >&2
+exit 1

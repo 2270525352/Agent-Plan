@@ -1,0 +1,16 @@
+{
+  "task_id": "",
+  "phase": "",
+  "allow": [],
+  "forbid": [
+    "docs/agent-plan/00-source/**"
+  ],
+  "protected": [
+    "docs/agent-plan/00-source/用户原话文档.md",
+    "docs/agent-plan/00-source/用户强调事项.md",
+    "docs/agent-plan/00-source/禁止偏离事项.md"
+  ],
+  "acceptance_cmd": "",
+  "test_cmd": "",
+  "updated_at": ""
+}
