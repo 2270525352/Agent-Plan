@@ -4,6 +4,10 @@ These templates are copied or adapted into a target project's `docs/agent-plan/`
 
 Agent-facing documents stay AI-readable: stable fields, explicit scope, forbidden scope, acceptance criteria, stop conditions, and status fields. The skill targets a single executing AI (one Claude or one Codex), with self-check plus scheduled testing as drift defense.
 
+## Profiles
+
+Not every template is emitted every time — see **Profiles** in `SKILL.md`. **lite** = core only; **standard** adds `用户强调事项`, `需求对齐检查表`, `总架构文档` (diagram inline) + `接口契约文档`, `阶段交付计划`, `需求对齐审查`, `提交检查表`; **full** adds the expanded prose docs `总需求文档`, `总设计文档`, `架构图`, `任务依赖图`, `架构一致性审查`. lite/standard drop the prose docs that restate machine-readable content.
+
 ## Template Map
 
 | Target directory | Templates | Purpose |
@@ -23,6 +27,7 @@ Agent-facing documents stay AI-readable: stable fields, explicit scope, forbidde
 ## Maintenance Rules
 
 - Keep Chinese filenames because the intended workflow uses Chinese planning documents.
+- When adding or removing a template, assign it to a profile tier in `SKILL.md` (lite / standard / full) so the tiers stay coherent.
 - Keep task and review templates field-based and granular.
 - The executing AI may be Claude or Codex; keep both `/goal` prompts in sync.
 - Drift defense is two-layer: AI self-check (inner) + scheduled testing (outer). Keep both wired.
