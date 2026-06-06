@@ -1,6 +1,6 @@
 ---
 name: agent-plan
-description: Plan a new project end-to-end into an AI-readable tree so a single AI window (one Claude or one Codex window) executes by following marked tasks instead of re-deciding what to build. Use when the user wants requirements aligned and frozen before coding, the user's exact words preserved verbatim as the alignment anchor, granular tasks with execution feedback, Claude/Codex /goal automation prompts, scheduled drift testing (Claude Code cron or Codex App) that runs tests and re-checks the source of truth, review gates, or strict git checkpoint discipline.
+description: Plan a new project end-to-end into an AI-readable tree so a single AI window (one Claude or one Codex window) executes by following marked tasks instead of re-deciding what to build. Use when the user wants requirements aligned and frozen before coding, the user's exact words preserved verbatim as the alignment anchor, granular tasks with execution feedback, Claude/Codex /goal automation prompts, scheduled drift testing (Claude Code cron or Codex App) that runs tests and re-checks the source of truth, review gates, strict git checkpoint discipline, or deterministic guardrails (Claude Code hooks + git hooks) that enforce task scope and commit discipline.
 ---
 
 # Agent-Plan
@@ -57,6 +57,7 @@ Use this skill when any of these are true:
    - The executing AI has no reliable internal timer (Codex can only block on `sleep`; it cannot self-wake), so the 30-min cycle comes from an EXTERNAL scheduler.
    - Claude window → Claude Code `/schedule` (cron `*/30 * * * *`). Codex window → Codex App task (`RRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=0,30;BYDAY=SU,MO,TU,WE,TH,FR,SA`).
    - The auditor must be INDEPENDENT — a clean agent that reads only the source of truth + diff, not the main agent's execution context, so it cannot rationalize the same drift.
+   - The auditor sees COMMITTED state only (it runs in a separate checkout / remote routine), so its input is the committed branch diff (`git diff <base>...<task-branch>`) and the main execution must checkpoint-commit every task — uncommitted work is invisible to it by design. The audit unit is per-task-commit; the 30-min timer is a heartbeat backstop.
    - Generate both prompt files; the user picks the one matching the AI they run.
 
 6. Treat git checkpoints as part of the workflow.
@@ -64,6 +65,10 @@ Use this skill when any of these are true:
    - Protect user changes.
    - Commit stable planning baselines and verified tasks when the user wants commits or the project workflow allows them.
    - Never mix unrelated changes in a commit.
+
+7. Enforce what can be enforced — with tooling, not just prose.
+   - The skill generates a guardrail layer (`10-guards/`): Claude Code hooks (scope-guard blocks out-of-scope / forbidden / source-of-truth writes in real time; a Stop hook checks execution feedback) plus git hooks (pre-commit enforces user-words append-only, requires a feedback entry before committing business code, and runs acceptance/tests; commit-msg enforces the commit format; pre-push blocks main/master).
+   - These are the hard enforcement of rules 1 / 2 / 3 / 6 — the prompt is the first layer, the guardrails are the backstop. Claude gets real-time hooks + git hooks; Codex relies on the git hooks (commit time). See `10-guards/护栏说明.md`.
 
 ## Single-Window Model
 
@@ -74,7 +79,8 @@ The whole project runs in ONE AI window — one Claude window or one Codex windo
 | Planning (requirements, architecture, task decomposition, ambiguity resolution) | The single window AI, before execution starts | Resolved up front and frozen into the source of truth. |
 | Execution (implementation, tests, interface compatibility, bug fixes, scoped refactors) | The same window AI | Follows the task spec; stays inside each task's allowed scope; writes execution feedback. |
 | Inner drift defense | The AI's self-check | Re-read source of truth + run acceptance/tests + write feedback. |
-| Outer drift defense | Scheduled testing | Claude Code cron when running Claude; Codex App automation when running Codex. |
+| Outer drift defense | Scheduled testing | Claude Code cron when running Claude; Codex App automation when running Codex. Audits COMMITTED state, so commit every task. |
+| Hard enforcement | Guardrails (`10-guards/`) | Claude Code hooks (real-time) + git hooks (commit/push), keyed off `current-task.json`. |
 
 The window may be Claude or Codex; the `/goal` prompts cover both so the user pastes whichever they run.
 
@@ -109,6 +115,7 @@ docs/agent-plan/
   04-execution/
     任务说明.md
     执行反馈日志.md
+    current-task.json
 
   05-reviews/
     需求对齐审查.md
@@ -131,7 +138,12 @@ docs/agent-plan/
   09-git/
     Git提交纪律.md
     提交检查表.md
+
+  10-guards/
+    护栏说明.md
 ```
+
+The guardrails' executable parts live OUTSIDE this tree (hooks only work in fixed locations): `.claude/hooks/`, `.claude/settings.json`, and `.githooks/`. `10-guards/护栏说明.md` documents them; the per-task state file the guards read is `04-execution/current-task.json`.
 
 ## Workflow
 
@@ -175,17 +187,26 @@ Before generating `/goal` and testing prompts, review against: user words, AI-re
 
 Generate `/goal` prompts for both Claude and Codex (`06-goals/`). Each makes the single AI run the full loop: read source of truth → pick task → implement within allowed scope → run acceptance and tests → write execution feedback → self-check against source of truth → git checkpoint. The user pastes whichever AI they run.
 
-### 9. Generate Scheduled Audit
+### 9. Generate Guardrails
+
+Generate the `10-guards/` enforcement layer (templates in `templates/guards/`) and install it so discipline is enforced by tooling, not just prompts:
+
+- `.claude/hooks/scope-guard.py` (PreToolUse) + `.claude/hooks/feedback-stop-check.py` (Stop), wired via `.claude/settings.json` (merge `settings.hooks.json`).
+- `.githooks/pre-commit` (user-words append-only; business commit needs an active task + a feedback entry; runs the task's acceptance/test commands), `pre-push` (no main/master), `commit-msg` (`<task> (Claude|Codex): …`); enable with `git config core.hooksPath .githooks` and `chmod +x`.
+- `04-execution/current-task.json` — the main loop rewrites it at the START of every task (task_id / allow / forbid / acceptance_cmd / test_cmd); the guards key off it. Empty task_id = guard passive (planning phase).
+- Claude gets real-time hooks + git hooks; Codex has no equivalent live hook, so its hard enforcement is the git hooks at commit time. Requires `python3` for the JSON-parsing hooks; the git append-only / main-branch / message checks degrade gracefully without it.
+
+### 10. Generate Scheduled Audit
 
 Create `07-testing/` — an independent, external-timer auditor (the executing AI has no reliable internal timer):
 
-- `定时测试方案.md` — the detection-only audit plan: re-read the source of truth, compare the feedback log against the real diff, optionally run tests/acceptance, classify GREEN / YELLOW / RED, plus the startup order.
+- `定时测试方案.md` — the detection-only audit plan: re-read the source of truth, compare the feedback log against the committed branch diff (`git diff <base>...<task-branch>`), optionally run tests/acceptance, classify GREEN / YELLOW / RED, plus the startup order.
 - `ClaudeCode定时任务提示词.md` — the audit prompt for Claude Code `/schedule` (cron `*/30 * * * *`), for a Claude window.
 - `CodexApp定时测试提示词.md` — the same audit for a Codex App task (`RRULE ... BYMINUTE=0,30 ...`), for a Codex window.
 
-Default interval: every 30 minutes. The auditor is DETECTION-ONLY — it records problems to `05-reviews/偏离用户原话报告.md` and never fixes or modifies anything. On RED the main execution stops. Tell the user to set up the auditor BEFORE starting the goal.
+Default interval: every 30 minutes — a heartbeat backstop; the real audit unit is per-task-commit, so the main loop must commit every task. The auditor sees COMMITTED state only and is DETECTION-ONLY — it records problems to `05-reviews/偏离用户原话报告.md` and never fixes or modifies anything. On RED the main execution stops. Tell the user to set up the auditor BEFORE starting the goal.
 
-### 10. Git Checkpoints
+### 11. Git Checkpoints
 
 In a git repository: run `git status` before edits, do not overwrite user changes, self-review the diff 3 times against the source of truth, commit only after tests/acceptance pass, put the AI name + task number in the commit message, never commit secrets/temp/failed output/unrelated formatting. When not a git repository: still generate `09-git/Git提交纪律.md` and ask whether to initialize a repo before committing.
 
@@ -206,6 +227,7 @@ The plan is ready for autonomous single-AI execution only when all are true:
 - the scheduled-testing plan exists
 - the trigger prompt for the AI in use exists (Claude Code cron or Codex App)
 - git discipline is defined
+- guardrails are installed and verified (Claude Code hooks + git hooks active, `core.hooksPath` set, `current-task.json` present)
 - review docs show no blocking drift, missing acceptance criteria, or missing verification
 
 If any condition is false, output the blockers and stop before automation.
