@@ -2,6 +2,14 @@
 
 All notable changes to Agent-Plan.
 
+## Unreleased
+
+### Added
+- `scripts/agent-plan-guards.py` — a conservative guardrail lifecycle helper with `install`, `verify`, and `uninstall`.
+
+### Changed
+- Guardrail installation now merges Claude settings and refuses to silently replace an existing non-`.githooks` `core.hooksPath` (Husky, lefthook, pre-commit, or custom hooks). Existing hook managers must explicitly chain Agent-Plan hooks, or the user must approve `--force-hooks-path`.
+
 ## v1.1.0 — 2026-06-07
 
 Optimization pass: turn prompt-only discipline into **enforced** discipline, fix the scheduled-auditor blind spot, and scale output to project size.

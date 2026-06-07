@@ -35,6 +35,31 @@ The trigger matches the AI: **Claude Code `/schedule` (cron)** when you run Clau
 
 **Plus a hard layer — guardrails.** The two layers above *detect* drift; a generated guardrail layer *enforces* it. Claude Code hooks block out-of-scope / forbidden / source-of-truth writes in real time and check feedback on stop; git hooks keep the user-words doc append-only, gate commits on an active task + a feedback entry + passing acceptance/tests, enforce the commit format, and block pushes to main/master. Claude gets hooks + git; Codex relies on the git hooks. See `10-guards/`.
 
+Guardrails are installed with `scripts/agent-plan-guards.py install|verify|uninstall`. The installer merges Claude settings and refuses to silently replace an existing hook manager such as Husky, lefthook, or pre-commit; chain Agent-Plan hooks from that manager, or use `--force-hooks-path` only after explicit approval.
+
+## Guardrail Lifecycle
+
+Install and verify guardrails in a target project:
+
+```bash
+python3 scripts/agent-plan-guards.py install --project /path/to/project
+python3 scripts/agent-plan-guards.py verify --project /path/to/project
+```
+
+If the project already uses a hook manager, the installer copies Agent-Plan hooks but keeps the existing `core.hooksPath`. Chain `.githooks/pre-commit`, `.githooks/commit-msg`, and `.githooks/pre-push` from that manager, then verify with:
+
+```bash
+python3 scripts/agent-plan-guards.py verify --project /path/to/project --allow-existing-hooks-path
+```
+
+Uninstall only Agent-Plan hook files and Claude hook entries:
+
+```bash
+python3 scripts/agent-plan-guards.py uninstall --project /path/to/project
+```
+
+Add `--unset-hooks-path` only when `.githooks` is Agent-Plan-owned for that project.
+
 ## Install
 
 Clone this directory into your skills directory:

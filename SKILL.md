@@ -207,8 +207,12 @@ Generate `/goal` prompts for both Claude and Codex (`06-goals/`). Each makes the
 
 Generate the `10-guards/` enforcement layer (templates in `templates/guards/`) and install it so discipline is enforced by tooling, not just prompts:
 
-- `.claude/hooks/scope-guard.py` (PreToolUse) + `.claude/hooks/feedback-stop-check.py` (Stop), wired via `.claude/settings.json` (merge `settings.hooks.json`).
-- `.githooks/pre-commit` (user-words append-only; business commit needs an active task + a feedback entry; runs the task's acceptance/test commands), `pre-push` (no main/master), `commit-msg` (`<task> (Claude|Codex): …`); enable with `git config core.hooksPath .githooks` and `chmod +x`.
+- Prefer the bundled lifecycle script instead of manual copying:
+  `python3 <skill-dir>/scripts/agent-plan-guards.py install --project <target-project>`.
+- The script copies `.claude/hooks/scope-guard.py` (PreToolUse) and `.claude/hooks/feedback-stop-check.py` (Stop), then merges `settings.hooks.json` into `.claude/settings.json` without replacing existing hooks.
+- The script copies `.githooks/pre-commit` (user-words append-only; business commit needs an active task + a feedback entry; runs the task's acceptance/test commands), `pre-push` (no main/master), and `commit-msg` (`<task> (Claude|Codex): …`).
+- Safety rule: if the target repo already has a non-`.githooks` `core.hooksPath` (Husky, lefthook, pre-commit, custom hooks), do not overwrite it silently. Report the conflict and either document how to chain Agent-Plan hooks from the existing hook system or rerun only after user approval with `--force-hooks-path`.
+- Run `python3 <skill-dir>/scripts/agent-plan-guards.py verify --project <target-project>` after installation. If Agent-Plan hooks are chained from an existing hook manager, verify with `--allow-existing-hooks-path` and record that integration in `10-guards/护栏说明.md`. To remove only Agent-Plan hook entries/files, use `uninstall`; add `--unset-hooks-path` only when `.githooks` is Agent-Plan-owned for that project.
 - `04-execution/current-task.json` — the main loop rewrites it at the START of every task (task_id / allow / forbid / acceptance_cmd / test_cmd); the guards key off it. Empty task_id = guard passive (planning phase).
 - Claude gets real-time hooks + git hooks; Codex has no equivalent live hook, so its hard enforcement is the git hooks at commit time. Requires `python3` for the JSON-parsing hooks; the git append-only / main-branch / message checks degrade gracefully without it.
 
@@ -243,7 +247,7 @@ The plan is ready for autonomous single-AI execution only when all are true (pro
 - the scheduled-testing plan exists
 - the trigger prompt for the AI in use exists (Claude Code cron or Codex App)
 - git discipline is defined
-- guardrails are installed and verified (Claude Code hooks + git hooks active, `core.hooksPath` set, `current-task.json` present)
+- guardrails are installed and verified with `agent-plan-guards.py verify` (or, when an existing hook manager is present, Agent-Plan hooks are explicitly chained and that integration is documented), and `current-task.json` is present
 - review docs show no blocking drift, missing acceptance criteria, or missing verification
 
 If any condition is false, output the blockers and stop before automation.

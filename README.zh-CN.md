@@ -95,6 +95,31 @@ Agent-Plan 是一个用于**单 AI 自主执行**前置规划的 Codex / Claude 
 
 **护栏（硬执行底座）：** 上面两层是「提示词 + 审查」，都还可能被无视。skill 另生成一层 hooks + git 护栏，把能机器判定的规则直接拦死：改越界文件、改用户原话、提交格式不对、push 到 main 当场失败。跑 Claude 有实时 hook + git 双层，跑 Codex 靠 git hook（提交时）。详见 `10-guards/`。
 
+护栏用 `scripts/agent-plan-guards.py install|verify|uninstall` 安装、校验和卸载。安装器会合并 Claude settings,并且遇到 Husky / lefthook / pre-commit / 自定义 `core.hooksPath` 时默认不接管;先把 Agent-Plan hooks 串到已有 hook 系统里,只有用户明确同意时才用 `--force-hooks-path`。
+
+## 护栏生命周期
+
+在目标项目安装并校验护栏:
+
+```bash
+python3 scripts/agent-plan-guards.py install --project /path/to/project
+python3 scripts/agent-plan-guards.py verify --project /path/to/project
+```
+
+如果项目已有 hook manager,安装器会复制 Agent-Plan hooks,但保留原来的 `core.hooksPath`。请从已有 hook 系统里串联 `.githooks/pre-commit`、`.githooks/commit-msg`、`.githooks/pre-push`,然后这样校验:
+
+```bash
+python3 scripts/agent-plan-guards.py verify --project /path/to/project --allow-existing-hooks-path
+```
+
+只卸载 Agent-Plan 自己的 hook 文件和 Claude hook 条目:
+
+```bash
+python3 scripts/agent-plan-guards.py uninstall --project /path/to/project
+```
+
+只有确认 `.githooks` 是该项目专门给 Agent-Plan 用的,才加 `--unset-hooks-path`。
+
 ## 快速开始
 
 让你的 AI 代理调用 Agent-Plan：
@@ -186,7 +211,7 @@ docs/agent-plan/
 - 定时测试方案已生成。
 - 按所用 AI 的触发提示词已生成（Claude Code 定时任务 或 Codex App 定时测试）。
 - Git 提交纪律已定义。
-- 护栏已安装并校验（Claude Code hooks + git hooks 生效、`core.hooksPath` 已设、`current-task.json` 存在）。
+- 护栏已用 `agent-plan-guards.py verify` 校验（Claude Code hooks + git hooks 生效，或已有 hook manager 已明确串联 Agent-Plan hooks，`current-task.json` 存在）。
 - 审查文档显示没有阻塞性偏离、缺失验收标准或缺失验证。
 
 任一条件不满足时，skill 会输出阻塞项并停在自动化之前，写入 `05-reviews/自动模式门禁.md`。
