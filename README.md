@@ -1,8 +1,10 @@
 # Agent-Plan
 
-[![release](https://img.shields.io/badge/release-v1.0.0-2F9E44.svg)](https://github.com/2270525352/Agent-Plan) [![for](https://img.shields.io/badge/for-Claude%20%7C%20Codex-lightgrey.svg)]()
+[![release](https://img.shields.io/badge/release-v1.1.0-2F9E44.svg)](https://github.com/2270525352/Agent-Plan) [![for](https://img.shields.io/badge/for-Claude%20%7C%20Codex-lightgrey.svg)]()
 
 **English** | [中文](README.zh-CN.md)
+
+> **v1.1.0** — now with deterministic guardrails (Claude Code hooks + git hooks), project-size profiles, and a committed-state scheduled auditor. See [CHANGELOG](CHANGELOG.md).
 
 Agent-Plan is a Codex/Claude skill for building strict AI-readable planning trees that a **single AI** (one Claude window or one Codex window) executes autonomously via `/goal` — without drifting from the user's real intent.
 

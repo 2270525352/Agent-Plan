@@ -6,17 +6,19 @@
   <img src="https://img.shields.io/badge/skill-agent--plan-0B7285?style=for-the-badge" alt="agent-plan skill">
   <img src="https://img.shields.io/badge/for-Claude%20%7C%20Codex-2F9E44?style=for-the-badge" alt="for Claude and Codex">
   <img src="https://img.shields.io/badge/output-AI%20readable%20plan%20tree-CF1322?style=for-the-badge" alt="AI readable plan tree">
-  <img src="https://img.shields.io/badge/release-v1.0.0-2F9E44?style=for-the-badge" alt="release v1.0.0">
+  <img src="https://img.shields.io/badge/release-v1.1.0-2F9E44?style=for-the-badge" alt="release v1.1.0">
 </p>
 
 [![Provider](https://img.shields.io/badge/provider-Claude%20%7C%20Codex-lightgrey.svg)]()
 [![Mode](https://img.shields.io/badge/mode-single--AI%20autonomous-blue.svg)]()
-[![Anti-drift](https://img.shields.io/badge/anti--drift-self--check%20%2B%20scheduled%20tests-orange.svg)]()
+[![Anti-drift](https://img.shields.io/badge/anti--drift-self--check%20%2B%20audit%20%2B%20guards-orange.svg)]()
 [![Docs](https://img.shields.io/badge/docs-Chinese%20plan%20tree-orange.svg)]()
 
 **中文** | [English](README.md)
 
-[为什么需要前置规划](#为什么需要前置规划) · [它解决什么](#它解决什么) · [核心原则](#核心原则) · [两层防跑偏](#两层防跑偏) · [快速开始](#快速开始) · [输出目录](#输出目录) · [自动模式门禁](#自动模式门禁) · [安装](#安装)
+[为什么需要前置规划](#为什么需要前置规划) · [它解决什么](#它解决什么) · [核心原则](#核心原则) · [防跑偏](#防跑偏) · [快速开始](#快速开始) · [分档](#分档) · [输出目录](#输出目录) · [自动模式门禁](#自动模式门禁) · [安装](#安装)
+
+📋 **v1.1.0**：护栏（hooks + git）+ 分档 + 已提交状态审查 —— 见 [更新日志](CHANGELOG.md)
 
 </div>
 
@@ -78,7 +80,7 @@ Agent-Plan 是一个用于**单 AI 自主执行**前置规划的 Codex / Claude 
 | 两层防跑偏 | AI 自检是内部第一道防线，定时测试是外部兜底，两者都要。 |
 | 能强制就强制 | 能脚本判定的纪律交给护栏（Claude Code hooks + git hooks）硬执行，不只靠提示词。 |
 
-## 防跑偏：两层检测 + 护栏硬执行
+## 防跑偏
 
 只有一个 AI 在跑，没有第二个 AI 复核，所以靠两层检测盯住它：
 
@@ -115,7 +117,7 @@ $agent-plan 为这个项目建立规划文档树。保留我的原话，写一�
 8. 生成定时测试方案与对应触发提示词（Claude Code 定时任务 / Codex App）。
 9. 进入实现：单 AI 自主跑循环，自检 + 定时测试兜底，按 Git 检查点提交。
 
-## 分档（按项目大小）
+## 分档
 
 别给一个 todo CLI 生成 28 个文件。选一档，决定生成哪些文档；**防跑偏核心（真相源、AI 可读需求、总任务、任务说明+反馈、goal、定时审查、运行时、git、护栏）每档都有**，分档只加规划深度。
 
