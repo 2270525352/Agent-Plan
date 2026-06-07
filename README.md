@@ -20,15 +20,18 @@ It generates:
 - Claude/Codex `/goal` prompts for autonomous execution
 - a scheduled-testing plan + trigger prompts (Claude Code cron or Codex App)
 - git checkpoint rules
+- a guardrail layer (Claude Code hooks + git hooks) that enforces task scope, user-words append-only, commit format, and no-push-to-main
 
 ## Two Layers Against Drift
 
 There is no second AI to catch mistakes, so drift is caught two ways:
 
 - **Inner — self-check.** After each task, each large change, and whenever it nears a forbidden boundary, the executing AI re-reads the source of truth, runs acceptance/tests, and writes execution feedback.
-- **Outer — scheduled testing.** On a timer, a routine runs the test suite, runs acceptance commands, re-reads the source of truth, compares the execution-feedback log against the real diff, and reports GREEN / YELLOW / RED. It only audits — it never fixes business code on its own.
+- **Outer — scheduled testing.** On a timer, a routine runs the test suite, runs acceptance commands, re-reads the source of truth, compares the execution-feedback log against the committed branch diff, and reports GREEN / YELLOW / RED. It only audits — it never fixes business code on its own.
 
-The trigger matches the AI: **Claude Code `/schedule` (cron)** when you run Claude, **Codex App automation** when you run Codex.
+The trigger matches the AI: **Claude Code `/schedule` (cron)** when you run Claude, **Codex App automation** when you run Codex. The auditor sees COMMITTED state only, so the main loop commits every task; the audit unit is per-task-commit and the 30-min timer is a heartbeat backstop.
+
+**Plus a hard layer — guardrails.** The two layers above *detect* drift; a generated guardrail layer *enforces* it. Claude Code hooks block out-of-scope / forbidden / source-of-truth writes in real time and check feedback on stop; git hooks keep the user-words doc append-only, gate commits on an active task + a feedback entry + passing acceptance/tests, enforce the commit format, and block pushes to main/master. Claude gets hooks + git; Codex relies on the git hooks. See `10-guards/`.
 
 ## Install
 
@@ -61,12 +64,13 @@ docs/agent-plan/
   01-requirements/  总需求文档.md  AI可读需求文档.md  需求对齐检查表.md  开放问题.md
   02-architecture/  总架构文档.md  架构图.md  总设计文档.md  接口契约文档.md
   03-tasks/         总任务文档.md  任务依赖图.md  阶段交付计划.md
-  04-execution/     任务说明.md  执行反馈日志.md
+  04-execution/     任务说明.md  执行反馈日志.md  current-task.json
   05-reviews/       需求对齐审查.md  架构一致性审查.md  偏离用户原话报告.md  自动模式门禁.md
   06-goals/         Claude-goal.md  Codex-goal.md
   07-testing/       定时测试方案.md  ClaudeCode定时任务提示词.md  CodexApp定时测试提示词.md
   08-runtime/       单AI执行模式.md
   09-git/           Git提交纪律.md  提交检查表.md
+  10-guards/        护栏说明.md  (+ installed to .claude/ and .githooks/)
 ```
 
 See `templates/` for the document formats, and `examples/` for a **filled** sample tree (a small `local-todo-cli` project) showing what good output looks like.

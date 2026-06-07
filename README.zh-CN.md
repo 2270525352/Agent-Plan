@@ -60,6 +60,7 @@ Agent-Plan 是一个用于**单 AI 自主执行**前置规划的 Codex / Claude 
 - **Claude / Codex `/goal` 提示词** — 让单个 AI 自主跑完整循环。
 - **定时测试方案 + 两套触发提示词** — 跑测试 + 对照真相源，按所用 AI 选 Claude Code 定时任务或 Codex App。
 - **Git 提交纪律与提交检查表**。
+- **护栏（hooks + git）** — 把「改错文件、动用户原话、提交格式、push main」从「提示词请求」变成「工具强制」:Claude 用实时 hook + git hook,Codex 用 git hook。
 
 ## 核心原则
 
@@ -67,7 +68,7 @@ Agent-Plan 是一个用于**单 AI 自主执行**前置规划的 Codex / Claude 
 
 需求理解、架构判断、任务拆分、边界确认，都应该在实现前完成并冻结。执行阶段只按已审查通过的任务文档做事，并把每一步都反馈出来。
 
-四条不可妥协的规则：
+五条不可妥协的规则：
 
 | 规则 | 含义 |
 | :--- | :--- |
@@ -75,17 +76,22 @@ Agent-Plan 是一个用于**单 AI 自主执行**前置规划的 Codex / Claude 
 | 文档要 AI 可读且颗粒 | 用稳定字段：允许范围、禁止范围、依赖、验收标准、验证命令、停止条件；步骤可逐条勾选。 |
 | 执行必须有反馈 | 每个任务、每次自检都写入执行反馈日志：真实改动、验收/测试结果、对照真相源结论。没写反馈视为未完成。 |
 | 两层防跑偏 | AI 自检是内部第一道防线，定时测试是外部兜底，两者都要。 |
+| 能强制就强制 | 能脚本判定的纪律交给护栏（Claude Code hooks + git hooks）硬执行，不只靠提示词。 |
 
-## 两层防跑偏
+## 防跑偏：两层检测 + 护栏硬执行
 
-只有一个 AI 在跑，没有第二个 AI 复核，所以靠两层机制盯住它：
+只有一个 AI 在跑，没有第二个 AI 复核，所以靠两层检测盯住它：
 
 | 层 | 机制 | 触发时机 | 做什么 |
 | :--- | :--- | :--- | :--- |
 | 内层 | AI 自检 | 每完成一个任务、每改一大块、每接近禁止范围 | 重读真相源 + 跑验收/测试 + 写执行反馈 |
-| 外层 | 定时测试 | 每 30 分钟（或每完成 N 个任务） | 跑测试套件 + 跑验收命令 + 重读真相源 + 对照执行反馈与真实 diff + 查 git，输出 GREEN/YELLOW/RED |
+| 外层 | 定时测试 | 每完成一个任务提交（30 分钟为心跳兜底） | 跑测试套件 + 跑验收命令 + 重读真相源 + 对照执行反馈与已提交分支 diff + 查 git，输出 GREEN/YELLOW/RED |
 
 > 触发器跟着所用 AI 走：跑 **Claude** 就用 **Claude Code 的 `/schedule`（cron 定时任务）**；跑 **Codex** 就用 **Codex App 自动化**。两套提示词内容一致，用哪个 AI 就用哪套。定时测试只审查、只报告，不擅自改业务代码；发现 RED 就停下并写入偏离报告。
+>
+> **只看已提交状态**：远程定时代理看不到未提交的工作区改动，所以审查输入是已提交的分支 diff（`git diff 基线...任务分支`），主循环每个任务都要提交 + push。审查单元是「每个任务提交」，30 分钟是心跳兜底。
+
+**护栏（硬执行底座）：** 上面两层是「提示词 + 审查」，都还可能被无视。skill 另生成一层 hooks + git 护栏，把能机器判定的规则直接拦死：改越界文件、改用户原话、提交格式不对、push 到 main 当场失败。跑 Claude 有实时 hook + git 双层，跑 Codex 靠 git hook（提交时）。详见 `10-guards/`。
 
 ## 快速开始
 
@@ -119,12 +125,13 @@ docs/agent-plan/
   01-requirements/  总需求文档.md  AI可读需求文档.md  需求对齐检查表.md  开放问题.md
   02-architecture/  总架构文档.md  架构图.md  总设计文档.md  接口契约文档.md
   03-tasks/         总任务文档.md  任务依赖图.md  阶段交付计划.md
-  04-execution/     任务说明.md  执行反馈日志.md
+  04-execution/     任务说明.md  执行反馈日志.md  current-task.json
   05-reviews/       需求对齐审查.md  架构一致性审查.md  偏离用户原话报告.md  自动模式门禁.md
   06-goals/         Claude-goal.md  Codex-goal.md
   07-testing/       定时测试方案.md  ClaudeCode定时任务提示词.md  CodexApp定时测试提示词.md
   08-runtime/       单AI执行模式.md
   09-git/           Git提交纪律.md  提交检查表.md
+  10-guards/        护栏说明.md（可执行部分装到 .claude/ 与 .githooks/）
 ```
 
 每一层对应的模板见 [`templates/`](templates/);一份**填好的样板**(小项目 `local-todo-cli`)见 [`examples/`](examples/),直接看「填好长啥样」。
@@ -144,6 +151,7 @@ docs/agent-plan/
 | `07-testing/` | 定时测试方案与触发提示词（Claude Code / Codex App）。 |
 | `08-runtime/` | 单 AI 执行循环与停止条件。 |
 | `09-git/` | Git 检查点与提交纪律。 |
+| `10-guards/` | 把纪律变成 hooks + git 硬约束：实时拦越界写入、保护用户原话、提交门禁、禁 push main。 |
 
 </details>
 
@@ -164,6 +172,7 @@ docs/agent-plan/
 - 定时测试方案已生成。
 - 按所用 AI 的触发提示词已生成（Claude Code 定时任务 或 Codex App 定时测试）。
 - Git 提交纪律已定义。
+- 护栏已安装并校验（Claude Code hooks + git hooks 生效、`core.hooksPath` 已设、`current-task.json` 存在）。
 - 审查文档显示没有阻塞性偏离、缺失验收标准或缺失验证。
 
 任一条件不满足时，skill 会输出阻塞项并停在自动化之前，写入 `05-reviews/自动模式门禁.md`。

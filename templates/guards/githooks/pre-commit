@@ -1,0 +1,72 @@
+#!/bin/sh
+# Agent-Plan pre-commit hook (Claude & Codex):
+#   1) user-words doc is append-only — no deleted/rewritten lines;
+#   2) committing business code requires an active task + an execution-feedback entry;
+#   3) run the current task's acceptance/test commands (from current-task.json) if set.
+# Bypass with AGENT_PLAN_SKIP_HOOKS=1 (emergencies only).
+[ "${AGENT_PLAN_SKIP_HOOKS:-}" = "1" ] && exit 0
+
+root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+CT="$root/docs/agent-plan/04-execution/current-task.json"
+FB="$root/docs/agent-plan/04-execution/执行反馈日志.md"
+APPEND_ONLY="docs/agent-plan/00-source/用户原话文档.md"
+
+fail() {
+  echo "[agent-plan] 提交被拒:$1" >&2
+  echo "  紧急绕过: AGENT_PLAN_SKIP_HOOKS=1 git commit ..." >&2
+  exit 1
+}
+
+# 1) append-only: protected docs must have zero deleted lines in the staged diff.
+nums=$(git -c core.quotePath=false diff --cached --numstat -- "$APPEND_ONLY" 2>/dev/null)
+if [ -n "$nums" ]; then
+  deleted=$(printf '%s\n' "$nums" | head -n1 | awk '{print $2}')
+  case "$deleted" in
+    ''|0|-) : ;;  # 0 deletions, or binary("-"): ok
+    *) fail "$APPEND_ONLY 是只追加文档,本次删除/改写了 $deleted 行。原话只能追加,不能改写。" ;;
+  esac
+fi
+
+# Business files = staged files outside the planning tree.
+business=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR | grep -v '^docs/agent-plan/' || true)
+[ -z "$business" ] && exit 0   # planning/docs-only commit: skip task gating.
+
+# JSON reads need python3; degrade gracefully (append-only check above still ran).
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "[agent-plan] 警告:未找到 python3,跳过任务门禁(append-only 检查已通过)。" >&2
+  exit 0
+fi
+json_get() {
+  python3 -c 'import json,sys
+try:
+    d=json.load(open(sys.argv[1],encoding="utf-8"))
+    v=d.get(sys.argv[2],"")
+    print(v if isinstance(v,str) else "")
+except Exception:
+    print("")' "$1" "$2" 2>/dev/null
+}
+
+[ -f "$CT" ] || fail "提交了业务代码但缺少 ${CT}。开始任务时先写入当前 task_id / allow / 验收命令。"
+task_id=$(json_get "$CT" task_id)
+[ -n "$task_id" ] || fail "current-task.json 的 task_id 为空。开始一个任务前不要提交业务代码。"
+
+# 2) execution feedback must exist for this task.
+if [ -f "$FB" ]; then
+  grep -q "$task_id" "$FB" || fail "执行反馈日志里没有 $task_id 的记录。先写执行反馈再提交(没反馈=未完成)。"
+else
+  fail "缺少执行反馈日志 ${FB}。"
+fi
+
+# 3) run acceptance / test commands if provided.
+run_gate() {
+  cmd="$1"; label="$2"
+  if [ -z "$cmd" ]; then
+    echo "[agent-plan] 警告:${label}命令为空,跳过(建议在 current-task.json 填上)。" >&2
+    return 0
+  fi
+  echo "[agent-plan] 运行$label:$cmd" >&2
+  ( cd "$root" && sh -c "$cmd" ) || fail "${label}失败,先修过再提交:$cmd"
+}
+run_gate "$(json_get "$CT" acceptance_cmd)" "验收"
+run_gate "$(json_get "$CT" test_cmd)" "测试"
+exit 0
