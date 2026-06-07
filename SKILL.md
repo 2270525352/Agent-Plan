@@ -84,33 +84,48 @@ The whole project runs in ONE AI window — one Claude window or one Codex windo
 
 The window may be Claude or Codex; the `/goal` prompts cover both so the user pastes whichever they run.
 
+## Profiles
+
+Scale to the project — don't emit ~28 files for a todo CLI. Pick a profile; it decides which documents are generated. The enforcement CORE (source of truth, AI-readable requirements, total tasks, task spec + feedback, goals, scheduled audit, runtime, git, guardrails) ships in EVERY profile — profiles only add planning depth.
+
+| Profile | When | Roughly |
+|---|---|---|
+| **lite** | small / single-component / throwaway; requirements basically clear | ~14 files: core only. No separate architecture docs (add `接口契约文档.md` only if real interfaces exist). |
+| **standard** (default) | a typical multi-part project | lite + `用户强调事项`, `需求对齐检查表`, `总架构文档` (diagram inline) + `接口契约文档`, `阶段交付计划`, `需求对齐审查`, `提交检查表`. ~20 files. |
+| **full** | large / multi-component / team handoff / regulated | every template, incl. the expanded prose docs `总需求文档`, `总设计文档`, `架构图`, `任务依赖图`, `架构一致性审查`. ~28 files. |
+
+Dedup: lite/standard do NOT emit the human-prose docs that restate machine-readable content — `总需求文档` (use `AI可读需求文档`), `总设计文档` / `架构图` (fold the mermaid diagram inline into `总架构文档`). Full keeps the expanded set, where prose versions earn their keep for big projects and handoffs.
+
+Selecting: infer from scope (one component & clear → lite; typical → standard; large / regulated / handoff → full) and state which you picked; ask only if genuinely ambiguous. The user can name a profile or add/drop individual docs. Whatever the profile, the Auto-Mode Gate still requires every CORE item.
+
 ## Required Output Tree
 
-Create this tree in the target project unless the user asks for another path:
+Create this tree in the target project unless the user asks for another path. This is the FULL tree, tagged so you can see what each profile emits — `lite`/`standard` emit a subset (see Profiles). Tags: (untagged) = all profiles incl. lite · `[S]` = standard + full · `[F]` = full only.
 
 ```text
+# tags: (none) = all profiles incl. lite · [S] = standard + full · [F] = full only
 docs/agent-plan/
   00-source/
     用户原话文档.md
-    用户强调事项.md
     禁止偏离事项.md
+    用户强调事项.md            [S]
 
   01-requirements/
-    总需求文档.md
     AI可读需求文档.md
-    需求对齐检查表.md
     开放问题.md
+    需求对齐检查表.md          [S]
+    总需求文档.md              [F]
 
-  02-architecture/
-    总架构文档.md
-    架构图.md
-    总设计文档.md
-    接口契约文档.md
+  02-architecture/            [S]  (lite: skip dir; add 接口契约文档.md only if real interfaces exist)
+    总架构文档.md              [S]  (embed the mermaid diagram inline)
+    接口契约文档.md            [S]
+    架构图.md                  [F]
+    总设计文档.md              [F]
 
   03-tasks/
     总任务文档.md
-    任务依赖图.md
-    阶段交付计划.md
+    阶段交付计划.md            [S]
+    任务依赖图.md              [F]
 
   04-execution/
     任务说明.md
@@ -118,16 +133,16 @@ docs/agent-plan/
     current-task.json
 
   05-reviews/
-    需求对齐审查.md
-    架构一致性审查.md
     偏离用户原话报告.md
     自动模式门禁.md
+    需求对齐审查.md            [S]
+    架构一致性审查.md          [F]
 
   06-goals/
     Claude-goal.md
     Codex-goal.md
 
-  07-testing/
+  07-testing/                 (generate the trigger prompt for the AI you run)
     定时测试方案.md
     ClaudeCode定时任务提示词.md
     CodexApp定时测试提示词.md
@@ -137,7 +152,7 @@ docs/agent-plan/
 
   09-git/
     Git提交纪律.md
-    提交检查表.md
+    提交检查表.md              [S]
 
   10-guards/
     护栏说明.md
@@ -155,6 +170,7 @@ Collect:
 - draft requirements, architecture docs, interface contracts
 - existing codebase constraints
 - which AI will execute: Claude (Claude Code) or Codex
+- profile: lite / standard / full (see Profiles — infer from project size, confirm only if unsure)
 - git policy: commit now, propose only, or disabled
 
 If files are provided, read them before generating final docs.
@@ -212,12 +228,12 @@ In a git repository: run `git status` before edits, do not overwrite user change
 
 ## Auto-Mode Gate
 
-The plan is ready for autonomous single-AI execution only when all are true:
+The plan is ready for autonomous single-AI execution only when all are true (profile-specific docs are required only when the chosen profile emits them; CORE items are always required):
 
 - user words are recorded append-only
 - AI-readable requirements trace back to user-word records
-- architecture and design cover all P0 / current-phase requirements
-- interface contracts are explicit and frozen
+- architecture and design cover all P0 / current-phase requirements (standard / full; lite may skip)
+- interface contracts are explicit and frozen (when the project has interfaces)
 - total tasks trace to requirements and are granular enough
 - the task spec (任务说明) has clear allowed and forbidden scope
 - every task has an acceptance command and acceptance criteria

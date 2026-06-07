@@ -1,8 +1,10 @@
 # Agent-Plan
 
-[![release](https://img.shields.io/badge/release-v1.0.0-2F9E44.svg)](https://github.com/2270525352/Agent-Plan) [![for](https://img.shields.io/badge/for-Claude%20%7C%20Codex-lightgrey.svg)]()
+[![release](https://img.shields.io/badge/release-v1.1.0-2F9E44.svg)](https://github.com/2270525352/Agent-Plan) [![for](https://img.shields.io/badge/for-Claude%20%7C%20Codex-lightgrey.svg)]()
 
 **English** | [中文](README.zh-CN.md)
+
+> **v1.1.0** — now with deterministic guardrails (Claude Code hooks + git hooks), project-size profiles, and a committed-state scheduled auditor. See [CHANGELOG](CHANGELOG.md).
 
 Agent-Plan is a Codex/Claude skill for building strict AI-readable planning trees that a **single AI** (one Claude window or one Codex window) executes autonomously via `/goal` — without drifting from the user's real intent.
 
@@ -54,9 +56,19 @@ task document with execution feedback, generate Claude and Codex /goal prompts, 
 scheduled drift test (Claude Code cron, or Codex App) that runs the tests and re-checks the source of truth.
 ```
 
+## Profiles
+
+Scale to the project — don't emit ~28 files for a todo CLI. Pick a profile; the enforcement **core** (source of truth, AI-readable requirements, total tasks, task spec + feedback, goals, scheduled audit, runtime, git, guardrails) ships in every profile, and profiles only add planning depth.
+
+- **lite** — small / single-component / clear requirements. ~14 files, core only (no separate architecture docs unless there are real interfaces).
+- **standard** (default) — a typical multi-part project. lite + emphasis doc, alignment checklist, architecture overview (diagram inline) + interface contracts, phase plan, alignment review, commit checklist. ~20 files.
+- **full** — large / handoff / regulated. Every template, including the expanded prose docs. ~28 files.
+
+lite/standard skip the prose docs that restate machine-readable content (`总需求文档`, `总设计文档`, `架构图`); full keeps them. See SKILL.md → Profiles for the exact matrix.
+
 ## Output Tree
 
-Agent-Plan creates `docs/agent-plan/` in the target project:
+Agent-Plan creates `docs/agent-plan/` in the target project (the full tree below; lite/standard emit a subset — see Profiles):
 
 ```text
 docs/agent-plan/
