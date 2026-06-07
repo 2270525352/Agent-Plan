@@ -12,7 +12,7 @@ local-todo-cli/docs/agent-plan/
   01-requirements/AI可读需求文档.md ← 大白话转成带 id/约束/验收的可执行需求,逐条追溯到原话
   02-architecture/架构图.md        ← 真实架构图 + 每个部分的职责
   03-tasks/总任务文档.md           ← 按阶段、颗粒化、带允许/禁止范围和验收命令
-  04-execution/任务说明.md         ← 单窗口 AI 照着执行的那份
+  04-execution/任务说明.md         ← 主线 AI 照着执行的那份(本例禁用支线)
   05-reviews/自动模式门禁.md       ← 审查通过、放行进自动模式的样子
 ```
 

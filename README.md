@@ -6,11 +6,11 @@
 
 > **v1.1.0** — now with deterministic guardrails (Claude Code hooks + git hooks), project-size profiles, and a committed-state scheduled auditor. See [CHANGELOG](CHANGELOG.md).
 
-Agent-Plan is a Codex/Claude skill for building strict AI-readable planning trees that a **single AI** (one Claude window or one Codex window) executes autonomously via `/goal` — without drifting from the user's real intent.
+Agent-Plan is a Codex/Claude skill for building strict AI-readable planning trees that one **mainline AI window** (Claude, Codex, or a CLI conversation) executes autonomously via `/goal`, optionally with bounded helper agents — without drifting from the user's real intent.
 
 ## Purpose
 
-Long autonomous runs drift: the AI starts reinterpreting the requirements while it codes. Agent-Plan moves interpretation into the planning phase, freezes it into a source of truth, and keeps the executing AI honest with two layers of drift defense.
+Long autonomous runs drift: the AI starts reinterpreting the requirements while it codes. Agent-Plan moves interpretation into the planning phase, freezes it into a source of truth, and keeps the mainline AI honest with self-checks, side-agent merge gates, scheduled audits, and hard guardrails.
 
 It generates:
 
@@ -18,22 +18,35 @@ It generates:
 - AI-readable requirements
 - architecture and design documents
 - a granular total task document
-- a task spec + an execution-feedback log
+- a task spec + execution-feedback and side-task logs
 - Claude/Codex `/goal` prompts for autonomous execution
 - a scheduled-testing plan + trigger prompts (Claude Code cron or Codex App)
 - git checkpoint rules
 - a guardrail layer (Claude Code hooks + git hooks) that enforces task scope, user-words append-only, commit format, and no-push-to-main
 
-## Two Layers Against Drift
+## Mainline And Helper Agents
 
-There is no second AI to catch mistakes, so drift is caught two ways:
+There is one mainline decision authority. The mainline window owns requirements interpretation, task state, merge decisions, git checkpoints, and stop/go decisions.
 
-- **Inner — self-check.** After each task, each large change, and whenever it nears a forbidden boundary, the executing AI re-reads the source of truth, runs acceptance/tests, and writes execution feedback.
+Helper agents are optional side workers. They only receive bounded contracts: parent task, source requirements, allowed files, forbidden files, expected output, acceptance criteria, verification command, and stop conditions. Their output is advisory until the mainline classifies it:
+
+- **GREEN** — complete, in scope, traceable, verified, no new assumptions.
+- **YELLOW** — useful but incomplete, assumed something, lacks tests, or needs mainline follow-up.
+- **RED** — changes requirements, exceeds scope, conflicts with source of truth, breaks contracts, or cannot be verified.
+
+A parent task is not complete until every side task is merged, rejected, or explicitly blocked in `04-execution/支线任务记录.md`.
+
+## Three Layers Against Drift
+
+Drift is caught three ways:
+
+- **Inner — self-check.** After each task, each large change, and whenever it nears a forbidden boundary, the mainline AI re-reads the source of truth, runs acceptance/tests, and writes execution feedback.
+- **Merge gate — side-agent review.** Helper output is checked for completeness, source traceability, allowed scope, conflicts, verification, and drift before it enters the mainline.
 - **Outer — scheduled testing.** On a timer, a routine runs the test suite, runs acceptance commands, re-reads the source of truth, compares the execution-feedback log against the committed branch diff, and reports GREEN / YELLOW / RED. It only audits — it never fixes business code on its own.
 
 The trigger matches the AI: **Claude Code `/schedule` (cron)** when you run Claude, **Codex App automation** when you run Codex. The auditor sees COMMITTED state only, so the main loop commits every task; the audit unit is per-task-commit and the 30-min timer is a heartbeat backstop.
 
-**Plus a hard layer — guardrails.** The two layers above *detect* drift; a generated guardrail layer *enforces* it. Claude Code hooks block out-of-scope / forbidden / source-of-truth writes in real time and check feedback on stop; git hooks keep the user-words doc append-only, gate commits on an active task + a feedback entry + passing acceptance/tests, enforce the commit format, and block pushes to main/master. Claude gets hooks + git; Codex relies on the git hooks. See `10-guards/`.
+**Plus a hard layer — guardrails.** The layers above *detect* drift; a generated guardrail layer *enforces* what tooling can enforce. Claude Code hooks block out-of-scope / forbidden / source-of-truth writes in real time and check feedback on stop; git hooks keep the user-words doc append-only, gate commits on an active task + a feedback entry + passing acceptance/tests, enforce the commit format, and block pushes to main/master. Claude gets hooks + git; Codex relies on the git hooks. See `10-guards/`.
 
 Guardrails are installed with `scripts/agent-plan-guards.py install|verify|uninstall`. The installer merges Claude settings and refuses to silently replace an existing hook manager such as Husky, lefthook, or pre-commit; chain Agent-Plan hooks from that manager, or use `--force-hooks-path` only after explicit approval.
 
@@ -83,7 +96,7 @@ scheduled drift test (Claude Code cron, or Codex App) that runs the tests and re
 
 ## Profiles
 
-Scale to the project — don't emit ~28 files for a todo CLI. Pick a profile; the enforcement **core** (source of truth, AI-readable requirements, total tasks, task spec + feedback, goals, scheduled audit, runtime, git, guardrails) ships in every profile, and profiles only add planning depth.
+Scale to the project — don't emit ~28 files for a todo CLI. Pick a profile; the enforcement **core** (source of truth, AI-readable requirements, total tasks, task spec + feedback + side-task records, goals, scheduled audit, runtime, git, guardrails) ships in every profile, and profiles only add planning depth.
 
 - **lite** — small / single-component / clear requirements. ~14 files, core only (no separate architecture docs unless there are real interfaces).
 - **standard** (default) — a typical multi-part project. lite + emphasis doc, alignment checklist, architecture overview (diagram inline) + interface contracts, phase plan, alignment review, commit checklist. ~20 files.
@@ -101,11 +114,11 @@ docs/agent-plan/
   01-requirements/  总需求文档.md  AI可读需求文档.md  需求对齐检查表.md  开放问题.md
   02-architecture/  总架构文档.md  架构图.md  总设计文档.md  接口契约文档.md
   03-tasks/         总任务文档.md  任务依赖图.md  阶段交付计划.md
-  04-execution/     任务说明.md  执行反馈日志.md  current-task.json
+  04-execution/     任务说明.md  执行反馈日志.md  支线任务记录.md  current-task.json
   05-reviews/       需求对齐审查.md  架构一致性审查.md  偏离用户原话报告.md  自动模式门禁.md
   06-goals/         Claude-goal.md  Codex-goal.md
   07-testing/       定时测试方案.md  ClaudeCode定时任务提示词.md  CodexApp定时测试提示词.md
-  08-runtime/       单AI执行模式.md
+  08-runtime/       主线执行模式.md
   09-git/           Git提交纪律.md  提交检查表.md
   10-guards/        护栏说明.md  (+ installed to .claude/ and .githooks/)
 ```

@@ -6,9 +6,12 @@ All notable changes to Agent-Plan.
 
 ### Added
 - `scripts/agent-plan-guards.py` — a conservative guardrail lifecycle helper with `install`, `verify`, and `uninstall`.
+- Mainline + side-agent execution model with explicit helper contracts, `支线任务记录.md`, and GREEN / YELLOW / RED merge gates.
 
 ### Changed
 - Guardrail installation now merges Claude settings and refuses to silently replace an existing non-`.githooks` `core.hooksPath` (Husky, lefthook, pre-commit, or custom hooks). Existing hook managers must explicitly chain Agent-Plan hooks, or the user must approve `--force-hooks-path`.
+- Runtime, `/goal`, scheduled-audit, auto-gate, README, and example docs now distinguish the mainline decision authority from bounded helper/side work.
+- The old single-window runtime template is replaced by `templates/runtime/主线执行模式.md`.
 
 ## v1.1.0 — 2026-06-07
 
