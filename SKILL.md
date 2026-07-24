@@ -1,6 +1,6 @@
 ---
 name: agent-plan
-description: Plan a new project end-to-end into an AI-readable tree so a main CLI/conversation window can execute by following marked tasks instead of re-deciding what to build, optionally delegating bounded side tasks to helper agents while preserving one mainline decision authority. Use when the user wants requirements aligned and frozen before coding, the user's exact words preserved verbatim as the alignment anchor, granular tasks with execution feedback, helper-agent task contracts, merge gates for completeness and drift, Claude/Codex /goal automation prompts, scheduled drift testing (Claude Code cron or Codex App), strict git checkpoint discipline, or deterministic guardrails (Claude Code hooks + git hooks) that enforce task scope and commit discipline.
+description: Plan a new project end-to-end into an AI-readable tree so a main CLI/conversation window can execute by following marked tasks instead of re-deciding what to build, optionally delegating bounded side tasks to helper agents while preserving one mainline decision authority. Use when the user wants project-root AGENTS.md and CURRENT_STATE.md constraints before work starts, requirements aligned and frozen before coding, the user's exact words preserved verbatim as the alignment anchor, granular tasks with execution feedback, helper-agent task contracts, merge gates for completeness and drift, Claude/Codex /goal automation prompts, scheduled drift testing (Claude Code cron or Codex App), strict git checkpoint discipline, or deterministic guardrails (Claude Code hooks + git hooks) that enforce task scope and commit discipline.
 ---
 
 # Agent-Plan
@@ -12,6 +12,8 @@ The premise: humans and AI have a communication gap. Say it in plain words and t
 Scope is ONE MAINLINE window. The mainline window owns planning, task selection, final decisions, state, git checkpoints, and merge approval. It may call helper/side agents for bounded work, but helpers never become a second source of truth and never redefine requirements. Drift is caught by self-checks, side-agent merge gates, and scheduled testing that re-runs tests + re-reads the source of truth on a timer.
 
 Every document the AI reads must be AI-readable — explicit fields, scope, boundaries, acceptance criteria, verification commands, stop conditions (structured metadata the AI parses cleanly, not human prose). Narrative summaries are secondary only.
+
+Before generating the planning tree, Agent-Plan bootstraps the repository root with two durable coordination files: `AGENTS.md` for long-lived project rules and `CURRENT_STATE.md` for live status. These are read by every new window before it touches the plan or project files.
 
 ## Core Principle
 
@@ -78,6 +80,15 @@ Use this skill when any of these are true:
    - The skill generates a guardrail layer (`10-guards/`): Claude Code hooks (scope-guard blocks out-of-scope / forbidden / source-of-truth writes in real time; a Stop hook checks execution feedback) plus git hooks (pre-commit enforces user-words append-only, requires a feedback entry before committing business code, and runs acceptance/tests; commit-msg enforces the commit format; pre-push blocks main/master).
    - These are the hard enforcement backstop for append-only source of truth, task scope, feedback, acceptance/tests, commit format, and no main/master push. Claude gets real-time hooks + git hooks; Codex relies on the git hooks (commit time). See `10-guards/护栏说明.md`.
 
+9. Bootstrap root coordination before planning.
+   - Generate or merge project-root `AGENTS.md` before creating task docs. It is the repository-level rule file every AI window must read first.
+   - Generate project-root `CURRENT_STATE.md` before execution. It is the live state file every AI window must read before continuing, writing, dispatching helpers, or using earlier research.
+   - If `AGENTS.md` already exists, preserve existing content and insert/update only the `<!-- AGENT_PLAN_START --> ... <!-- AGENT_PLAN_END -->` block. Never overwrite a user's existing repository rules.
+   - `CURRENT_STATE.md` records current owner/writer, active task, changed files, blocked items, pending user decisions, helper-agent status, and the last safe checkpoint. Important changes must update it immediately.
+   - Multi-window rule: only one window may write the same final artifact at a time; other windows may research, draft, review, or propose. Before writing, re-read `AGENTS.md`, `CURRENT_STATE.md`, the latest target file on disk, and relevant Agent-Plan truth sources.
+   - User authorization rule: discussion, approval of a direction, or request for a preview does not equal permission to write final artifacts. Write only after the user explicitly asks to modify, execute, or save changes, unless the current task contract already grants that write.
+   - Response completeness rule: when the user discusses a multi-item range, show the whole affected range or complete proposed replacement, not just the one edited item.
+
 ## Mainline + Side-Agent Model
 
 The project has ONE mainline window — one Claude window, one Codex window, or one CLI conversation. That window may ask helper/side agents for bounded work, but the mainline remains the only coordinator and the only place where requirements are interpreted and state is advanced.
@@ -92,6 +103,7 @@ The project has ONE mainline window — one Claude window, one Codex window, or 
 | Side-agent drift defense | Merge gate | GREEN / YELLOW / RED classification before any helper output is accepted. |
 | Outer drift defense | Scheduled testing | Claude Code cron when running Claude; Codex App automation when running Codex. Audits COMMITTED state, so commit every task. |
 | Hard enforcement | Guardrails (`10-guards/`) | Claude Code hooks (real-time) + git hooks (commit/push), keyed off `current-task.json`. |
+| Cross-window continuity | Root `AGENTS.md` + `CURRENT_STATE.md` | Every new window reads durable rules first, then current state, then the Agent-Plan tree. |
 
 The mainline may be Claude or Codex; the `/goal` prompts cover both so the user pastes whichever they run. Helper use is optional. If no helper agent is available, execute the same plan in the mainline only.
 
@@ -124,13 +136,13 @@ GREEN may be merged by the mainline after self-review. YELLOW requires mainline 
 
 ## Profiles
 
-Scale to the project — don't emit ~28 files for a todo CLI. Pick a profile; it decides which documents are generated. The enforcement CORE (source of truth, AI-readable requirements, total tasks, task spec + feedback + side-task records, goals, scheduled audit, runtime, git, guardrails) ships in EVERY profile — profiles only add planning depth.
+Scale to the project — don't emit ~30 files for a todo CLI. Pick a profile; it decides which documents are generated. The enforcement CORE (root `AGENTS.md`, root `CURRENT_STATE.md`, source of truth, AI-readable requirements, total tasks, task spec + feedback + side-task records, goals, scheduled audit, runtime, git, guardrails) ships in EVERY profile — profiles only add planning depth.
 
 | Profile | When | Roughly |
 |---|---|---|
-| **lite** | small / single-component / throwaway; requirements basically clear | ~14 files: core only. No separate architecture docs (add `接口契约文档.md` only if real interfaces exist). |
-| **standard** (default) | a typical multi-part project | lite + `用户强调事项`, `需求对齐检查表`, `总架构文档` (diagram inline) + `接口契约文档`, `阶段交付计划`, `需求对齐审查`, `提交检查表`. ~20 files. |
-| **full** | large / multi-component / team handoff / regulated | every template, incl. the expanded prose docs `总需求文档`, `总设计文档`, `架构图`, `任务依赖图`, `架构一致性审查`. ~28 files. |
+| **lite** | small / single-component / throwaway; requirements basically clear | ~16 files incl. root bootstrap: core only. No separate architecture docs (add `接口契约文档.md` only if real interfaces exist). |
+| **standard** (default) | a typical multi-part project | lite + `用户强调事项`, `需求对齐检查表`, `总架构文档` (diagram inline) + `接口契约文档`, `阶段交付计划`, `需求对齐审查`, `提交检查表`. ~22 files. |
+| **full** | large / multi-component / team handoff / regulated | every template, incl. the expanded prose docs `总需求文档`, `总设计文档`, `架构图`, `任务依赖图`, `架构一致性审查`. ~30 files. |
 
 Dedup: lite/standard do NOT emit the human-prose docs that restate machine-readable content — `总需求文档` (use `AI可读需求文档`), `总设计文档` / `架构图` (fold the mermaid diagram inline into `总架构文档`). Full keeps the expanded set, where prose versions earn their keep for big projects and handoffs.
 
@@ -142,6 +154,8 @@ Create this tree in the target project unless the user asks for another path. Th
 
 ```text
 # tags: (none) = all profiles incl. lite · [S] = standard + full · [F] = full only
+AGENTS.md                  (project root, merge Agent-Plan block if file exists)
+CURRENT_STATE.md           (project root, live status and cross-window handoff)
 docs/agent-plan/
   00-source/
     用户原话文档.md
@@ -201,6 +215,43 @@ The guardrails' executable parts live OUTSIDE this tree (hooks only work in fixe
 
 ## Workflow
 
+### 0. Bootstrap Repository Coordination
+
+Before creating or updating `docs/agent-plan/`, create or merge the root coordination files from `templates/bootstrap/`:
+
+- `AGENTS.md` — durable repository rules. If the target already has `AGENTS.md`, preserve all existing content and insert/update only the `<!-- AGENT_PLAN_START --> ... <!-- AGENT_PLAN_END -->` block.
+- `CURRENT_STATE.md` — current status and handoff. If it exists, preserve useful current-state content and append a new Agent-Plan bootstrap/update record instead of discarding it.
+
+Prefer the bundled deterministic helper:
+
+```bash
+python3 <skill-dir>/scripts/agent-plan-bootstrap.py install --project <target-project>
+```
+
+Use `--append-state-log` when `CURRENT_STATE.md` already exists and you want the bootstrap run recorded. Use `--force-agents` or `--force-current-state` only after explicit user approval.
+
+The root `AGENTS.md` must state:
+
+- repository type and work mode
+- startup read order: `AGENTS.md` → `CURRENT_STATE.md` → `docs/agent-plan/00-source/用户原话文档.md` → requirements/tasks/runtime docs
+- mainline authority and helper-agent limits
+- write authorization rules
+- multi-window write mutex
+- target-file reread rule before editing final artifacts
+- state update rule after significant changes
+- response completeness rule for multi-item edits
+- git checkpoint discipline
+
+The root `CURRENT_STATE.md` must track:
+
+- current profile and mainline AI
+- active task and active writer / locked artifact
+- latest completed work
+- pending user decisions
+- helper-agent tasks
+- changed files and checkpoint commits
+- blockers and next step
+
 ### 1. Intake
 
 Collect:
@@ -211,6 +262,7 @@ Collect:
 - which mainline AI will execute: Claude (Claude Code) or Codex
 - whether helper/side agents may be used, and by what tool (CLI subagent, ask, CCB, manual second window, reviewer, etc.)
 - profile: lite / standard / full (see Profiles — infer from project size, confirm only if unsure)
+- whether root `AGENTS.md` / `CURRENT_STATE.md` exist and what content must be preserved
 - git policy: commit now, propose only, or disabled
 
 If files are provided, read them before generating final docs.
@@ -256,6 +308,8 @@ Before generating `/goal` and testing prompts, review against: user words, AI-re
 
 Generate `/goal` prompts for both Claude and Codex (`06-goals/`). Each makes the mainline AI run the full loop: read source of truth → pick task → optionally dispatch bounded helper work → merge-gate helper output → implement within allowed scope → run acceptance and tests → write execution feedback → self-check against source of truth → git checkpoint. The user pastes whichever AI they run.
 
+Both `/goal` prompts must start by reading root `AGENTS.md` and `CURRENT_STATE.md`, then the Agent-Plan tree. They must update `CURRENT_STATE.md` before and after any final artifact write, helper dispatch, task completion, blocker, or checkpoint commit.
+
 ### 9. Generate Guardrails
 
 Generate the `10-guards/` enforcement layer (templates in `templates/guards/`) and install it so discipline is enforced by tooling, not just prompts:
@@ -283,11 +337,15 @@ Default interval: every 30 minutes — a heartbeat backstop; the real audit unit
 
 In a git repository: run `git status` before edits, do not overwrite user changes, self-review the diff 3 times against the source of truth, commit only after tests/acceptance pass, put the AI name + task number in the commit message, never commit secrets/temp/failed output/unrelated formatting. When not a git repository: still generate `09-git/Git提交纪律.md` and ask whether to initialize a repo before committing.
 
+After every checkpoint commit, update `CURRENT_STATE.md` with the commit id, task status, changed files, verification result, and next action.
+
 ## Auto-Mode Gate
 
 The plan is ready for autonomous mainline execution only when all are true (profile-specific docs are required only when the chosen profile emits them; CORE items are always required):
 
 - user words are recorded append-only
+- root `AGENTS.md` exists and contains the Agent-Plan marked block without overwriting existing repository rules
+- root `CURRENT_STATE.md` exists and records the current active task, owner/writer, blockers, and next step
 - AI-readable requirements trace back to user-word records
 - architecture and design cover all P0 / current-phase requirements (standard / full; lite may skip)
 - interface contracts are explicit and frozen (when the project has interfaces)

@@ -1,17 +1,18 @@
 # Agent-Plan Templates
 
-These templates are copied or adapted into a target project's `docs/agent-plan/` tree.
+These templates are copied or adapted into a target project. Most files go into `docs/agent-plan/`; bootstrap files go to the project root.
 
 Agent-facing documents stay AI-readable: stable fields, explicit scope, forbidden scope, acceptance criteria, stop conditions, and status fields. The skill targets one mainline AI (Claude, Codex, or a CLI conversation), optionally with bounded helper agents. Drift defense is mainline self-check + side-agent merge gate + scheduled testing.
 
 ## Profiles
 
-Not every template is emitted every time — see **Profiles** in `SKILL.md`. **lite** = core only; **standard** adds `用户强调事项`, `需求对齐检查表`, `总架构文档` (diagram inline) + `接口契约文档`, `阶段交付计划`, `需求对齐审查`, `提交检查表`; **full** adds the expanded prose docs `总需求文档`, `总设计文档`, `架构图`, `任务依赖图`, `架构一致性审查`. lite/standard drop the prose docs that restate machine-readable content.
+Not every template is emitted every time — see **Profiles** in `SKILL.md`. **lite** = root bootstrap + core only; **standard** adds `用户强调事项`, `需求对齐检查表`, `总架构文档` (diagram inline) + `接口契约文档`, `阶段交付计划`, `需求对齐审查`, `提交检查表`; **full** adds the expanded prose docs `总需求文档`, `总设计文档`, `架构图`, `任务依赖图`, `架构一致性审查`. lite/standard drop the prose docs that restate machine-readable content.
 
 ## Template Map
 
-| Target directory | Templates | Purpose |
+| Target location | Templates | Purpose |
 |---|---|---|
+| project root | `bootstrap/AGENTS.md`, `bootstrap/CURRENT_STATE.md` | Repository-level rules and live cross-window state. Prefer `scripts/agent-plan-bootstrap.py` so existing AGENTS.md content is preserved. |
 | `00-source/` | `用户原话文档.md`, `用户强调事项.md`, `禁止偏离事项.md` | Preserve original user intent and hard boundaries |
 | `01-requirements/` | `总需求文档.md`, `AI可读需求文档.md`, `需求对齐检查表.md`, `开放问题.md` | Convert raw words into executable requirements |
 | `02-architecture/` | `总架构文档.md`, `架构图.md`, `总设计文档.md`, `接口契约文档.md` | Define architecture, design, diagrams, and frozen interfaces |
@@ -27,6 +28,9 @@ Not every template is emitted every time — see **Profiles** in `SKILL.md`. **l
 ## Maintenance Rules
 
 - Keep Chinese filenames because the intended workflow uses Chinese planning documents.
+- Keep root bootstrap files special: `AGENTS.md` and `CURRENT_STATE.md` are emitted to the target project root, not under `docs/agent-plan/`.
+- Merge `AGENTS.md` through `<!-- AGENT_PLAN_START --> ... <!-- AGENT_PLAN_END -->`; do not overwrite existing repository rules.
+- `CURRENT_STATE.md` is live coordination state. Preserve existing state by default and update it before execution, final artifact writes, helper dispatch, blockers, and checkpoint commits.
 - When adding or removing a template, assign it to a profile tier in `SKILL.md` (lite / standard / full) so the tiers stay coherent.
 - Keep task and review templates field-based and granular.
 - The mainline AI may be Claude or Codex; keep both `/goal` prompts in sync.

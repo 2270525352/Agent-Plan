@@ -38,7 +38,8 @@ Codex App 任务跑在**独立会话 / 环境**,以**已提交 / 已 push 的状
   git diff <基线分支>...<任务分支>      # 例如 git diff origin/main...HEAD
   git log --oneline <基线分支>..<任务分支>
 
-只读:docs/agent-plan/00-source/用户原话文档.md、用户强调事项.md、禁止偏离事项.md;
+只读:AGENTS.md、CURRENT_STATE.md;
+docs/agent-plan/00-source/用户原话文档.md、用户强调事项.md、禁止偏离事项.md;
 docs/agent-plan/03-tasks/总任务文档.md;docs/agent-plan/04-execution/执行反馈日志.md、支线任务记录.md、current-task.json;
 以及上面的已提交 diff 与提交历史。
 
@@ -47,16 +48,18 @@ docs/agent-plan/03-tasks/总任务文档.md;docs/agent-plan/04-execution/执行�
 2. 改动有没有超出任务允许范围(对照 current-task.json 的 allow / forbid)。
 3. 有没有硬编码事实 / 价格 / 链接 / 话术 / 临时数据。
 4. 进度跟文档(总任务、阶段)对不对得上。
-5. 执行反馈日志跟已提交 diff 对不对得上(有没有漏写、谎报)。
-6. 支线任务记录是否跟父任务对得上:每个支线都有合同、返回记录、合流门禁、GREEN/YELLOW/RED 判级;父任务完成前没有未处理支线。
-7. 有没有支线输出绕过主线合流门禁直接进入提交。
-8. 有没有大量改动迟迟不按任务粒度提交(会让审查变瞎)。
-9. current-task.json 的 task_id 是否跟最近提交 / 反馈对得上。
+5. CURRENT_STATE.md 是否和总任务、执行反馈、支线记录、最近提交一致。
+6. 执行反馈日志跟已提交 diff 对不对得上(有没有漏写、谎报)。
+7. 支线任务记录是否跟父任务对得上:每个支线都有合同、返回记录、合流门禁、GREEN/YELLOW/RED 判级;父任务完成前没有未处理支线。
+8. 有没有支线输出绕过主线合流门禁直接进入提交。
+9. 有没有大量改动迟迟不按任务粒度提交(会让审查变瞎)。
+10. current-task.json 的 task_id 是否跟最近提交 / 反馈 / CURRENT_STATE 对得上。
 
 输出:状态 GREEN / YELLOW / RED + 具体问题清单 + 涉及文件。
 
 处置(只检测、只记录):
 - 发现问题(YELLOW / RED)就【只追加】写进 docs/agent-plan/05-reviews/偏离用户原话报告.md。
 - RED:在报告里标 RED,让主线执行停下等用户确认。
+- 如果发现 CURRENT_STATE.md 落后或与提交不一致,标 YELLOW;如果它隐藏了锁冲突、未处理阻塞或错误任务状态,标 RED。
 - 绝不自己修复、绝不改业务代码、绝不动用户原话。修复交给主线执行 / 用户。
 ```

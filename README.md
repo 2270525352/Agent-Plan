@@ -14,6 +14,8 @@ Long autonomous runs drift: the AI starts reinterpreting the requirements while 
 
 It generates:
 
+- root `AGENTS.md` repository rules, merged through an Agent-Plan marker block
+- root `CURRENT_STATE.md` live handoff state for multi-window continuity
 - append-only user-word records
 - AI-readable requirements
 - architecture and design documents
@@ -73,6 +75,16 @@ python3 scripts/agent-plan-guards.py uninstall --project /path/to/project
 
 Add `--unset-hooks-path` only when `.githooks` is Agent-Plan-owned for that project.
 
+## Bootstrap Lifecycle
+
+Before generating the planning tree, bootstrap root coordination files in the target project:
+
+```bash
+python3 scripts/agent-plan-bootstrap.py install --project /path/to/project
+```
+
+This preserves an existing `AGENTS.md` and inserts or updates only the `<!-- AGENT_PLAN_START --> ... <!-- AGENT_PLAN_END -->` block. `CURRENT_STATE.md` is created if missing and preserved by default if it already exists. Use `--append-state-log` to record a bootstrap run in an existing state file; use force flags only after explicit approval.
+
 ## Install
 
 Clone this directory into your skills directory:
@@ -92,23 +104,26 @@ Ask your AI agent to use Agent-Plan:
 $agent-plan Build a planning tree for this project. Preserve my original words, write a granular
 task document with execution feedback, generate Claude and Codex /goal prompts, and create a
 scheduled drift test (Claude Code cron, or Codex App) that runs the tests and re-checks the source of truth.
+Start by creating or merging AGENTS.md and CURRENT_STATE.md at the project root.
 ```
 
 ## Profiles
 
-Scale to the project — don't emit ~28 files for a todo CLI. Pick a profile; the enforcement **core** (source of truth, AI-readable requirements, total tasks, task spec + feedback + side-task records, goals, scheduled audit, runtime, git, guardrails) ships in every profile, and profiles only add planning depth.
+Scale to the project — don't emit ~30 files for a todo CLI. Pick a profile; the enforcement **core** (root `AGENTS.md`, root `CURRENT_STATE.md`, source of truth, AI-readable requirements, total tasks, task spec + feedback + side-task records, goals, scheduled audit, runtime, git, guardrails) ships in every profile, and profiles only add planning depth.
 
-- **lite** — small / single-component / clear requirements. ~14 files, core only (no separate architecture docs unless there are real interfaces).
-- **standard** (default) — a typical multi-part project. lite + emphasis doc, alignment checklist, architecture overview (diagram inline) + interface contracts, phase plan, alignment review, commit checklist. ~20 files.
-- **full** — large / handoff / regulated. Every template, including the expanded prose docs. ~28 files.
+- **lite** — small / single-component / clear requirements. ~16 files incl. root bootstrap, core only (no separate architecture docs unless there are real interfaces).
+- **standard** (default) — a typical multi-part project. lite + emphasis doc, alignment checklist, architecture overview (diagram inline) + interface contracts, phase plan, alignment review, commit checklist. ~22 files.
+- **full** — large / handoff / regulated. Every template, including the expanded prose docs. ~30 files.
 
 lite/standard skip the prose docs that restate machine-readable content (`总需求文档`, `总设计文档`, `架构图`); full keeps them. See SKILL.md → Profiles for the exact matrix.
 
 ## Output Tree
 
-Agent-Plan creates `docs/agent-plan/` in the target project (the full tree below; lite/standard emit a subset — see Profiles):
+Agent-Plan creates root coordination files plus `docs/agent-plan/` in the target project (the full tree below; lite/standard emit a subset — see Profiles):
 
 ```text
+AGENTS.md              root repository rules; existing content is preserved via marker merge
+CURRENT_STATE.md       live state, write locks, active task, blockers, next step
 docs/agent-plan/
   00-source/        用户原话文档.md  用户强调事项.md  禁止偏离事项.md
   01-requirements/  总需求文档.md  AI可读需求文档.md  需求对齐检查表.md  开放问题.md

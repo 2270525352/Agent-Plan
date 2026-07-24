@@ -6,6 +6,8 @@
 - 展示从**用户原话**一路追溯到**任务说明**的关键链:
 
 ```
+local-todo-cli/AGENTS.md                    ← 仓库长期规则,新窗口第一份读
+local-todo-cli/CURRENT_STATE.md             ← 当前任务/写入锁/阻塞/下一步
 local-todo-cli/docs/agent-plan/
   00-source/用户原话文档.md       ← 逐字原话(连"别整"这种口语都照抄),最高真相源
   00-source/禁止偏离事项.md       ← 从原话提炼的硬边界(不许数据库/联网)

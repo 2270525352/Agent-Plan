@@ -7,26 +7,31 @@
 
 你可以调用支线智能体协助局部实现、测试、审查或分析,但主线权威只有你一个:你负责解释真相源、推进任务状态、合流判断、git checkpoint 和停止/继续。支线只能按合同工作,返回后必须经主线合流门禁,不能改需求方向、架构方向、接口契约方向或任务边界。
 
+启动顺序(每个新窗口/每轮任务前必读):
+AGENTS.md(仓库长期规则)、CURRENT_STATE.md(当前状态/写入锁/下一步);
+
 真相源(每个任务前必读,不得违背):
 docs/agent-plan/00-source/用户原话文档.md（逐字、永不改)、用户强调事项.md、禁止偏离事项.md;
 docs/agent-plan/01-requirements/AI可读需求文档.md;docs/agent-plan/02-architecture/接口契约文档.md;
 docs/agent-plan/03-tasks/总任务文档.md;docs/agent-plan/04-execution/任务说明.md、执行反馈日志.md、支线任务记录.md。
 
 执行循环:
-1. 先看 docs/agent-plan/05-reviews/偏离用户原话报告.md 有没有新的未处理 RED;有就停下等我确认,不要继续。
-2. 从总任务文档 / 任务说明选一个依赖已满足、未完成的任务。
-3. 把这个任务写进 docs/agent-plan/04-execution/current-task.json:task_id、allow、forbid、acceptance_cmd、test_cmd。提交门禁(pre-commit)和定时审查都靠它判定范围与验收。
-4. 只在该任务允许范围内改动;遇歧义 / 越权 / 缺验收就停下,写进 docs/agent-plan/01-requirements/开放问题.md,不许猜着干。
-5. 如果需要支线协助,先在 docs/agent-plan/04-execution/支线任务记录.md 写支线合同:支线 ID、父任务 ID、来源需求/原话、允许范围、禁止范围、预期输出、验收标准、验证命令、停止条件。未写合同不得派发。
-6. 支线返回后先写返回记录,再做主线合流门禁:完整性、范围、真相源追溯、接口/架构冲突、测试/验收、与其它支线冲突、偏移度 GREEN/YELLOW/RED。GREEN 才可合流;YELLOW 由主线补齐后再合流;RED 停止父任务并写偏离报告或开放问题。
-7. 跑该任务的验收命令和测试。
-8. 自己审查 3 次,对照真相源看完整 diff,确认没超范围、没偏离原话/接口契约、没硬编码、没有支线输出绕过合流门禁。
-9. 如实把这次执行追加到 docs/agent-plan/04-execution/执行反馈日志.md(改动文件、关联支线 ID、验收/测试结果、对照真相源结论、状态、下一步)。没写反馈视为未完成。
-10. 父任务所有支线都已合流 / 拒绝 / 阻塞并记录,测试过 + 自审过 → 做一次 checkpoint:提交信息写「<任务编号> (Codex): <简述>」,push 到专用功能分支,绝不 push 到 main / master。**每个任务都要提交 + push**——外层定时审查只看得到已提交的改动;Codex 没有实时 scope hook,越界主要靠提交时 pre-commit 拦,所以更要勤提交。
+1. 先读 AGENTS.md 和 CURRENT_STATE.md;如果 CURRENT_STATE.md 显示同一目标文件被其它窗口锁定,停下。
+2. 再看 docs/agent-plan/05-reviews/偏离用户原话报告.md 有没有新的未处理 RED;有就停下等我确认,不要继续。
+3. 从总任务文档 / 任务说明选一个依赖已满足、未完成的任务,并把 active task / active writer / locked artifact / next action 写进 CURRENT_STATE.md。
+4. 把这个任务写进 docs/agent-plan/04-execution/current-task.json:task_id、allow、forbid、acceptance_cmd、test_cmd。提交门禁(pre-commit)和定时审查都靠它判定范围与验收。
+5. 写任何最终成果文件前,重新读取 CURRENT_STATE.md 和磁盘上的目标文件最新版;用户没有明确授权写入时,只能提出草稿/方案,不能落盘。
+6. 只在该任务允许范围内改动;遇歧义 / 越权 / 缺验收就停下,写进 docs/agent-plan/01-requirements/开放问题.md 和 CURRENT_STATE.md,不许猜着干。
+7. 如果需要支线协助,先在 docs/agent-plan/04-execution/支线任务记录.md 写支线合同:支线 ID、父任务 ID、来源需求/原话、允许范围、禁止范围、预期输出、验收标准、验证命令、停止条件,并同步 CURRENT_STATE.md。未写合同不得派发。
+8. 支线返回后先写返回记录,再做主线合流门禁:完整性、范围、真相源追溯、接口/架构冲突、测试/验收、与其它支线冲突、偏移度 GREEN/YELLOW/RED。GREEN 才可合流;YELLOW 由主线补齐后再合流;RED 停止父任务并写偏离报告或开放问题,同步 CURRENT_STATE.md。
+9. 跑该任务的验收命令和测试。
+10. 自己审查 3 次,对照真相源看完整 diff,确认没超范围、没偏离原话/接口契约、没硬编码、没有支线输出绕过合流门禁。
+11. 如实把这次执行追加到 docs/agent-plan/04-execution/执行反馈日志.md(改动文件、关联支线 ID、验收/测试结果、对照真相源结论、状态、下一步),并同步 CURRENT_STATE.md。没写反馈视为未完成。
+12. 父任务所有支线都已合流 / 拒绝 / 阻塞并记录,测试过 + 自审过 → 做一次 checkpoint:提交信息写「<任务编号> (Codex): <简述>」,push 到专用功能分支,绝不 push 到 main / master。**每个任务都要提交 + push**——外层定时审查只看得到已提交的改动;Codex 没有实时 scope hook,越界主要靠提交时 pre-commit 拦,所以更要勤提交。提交后把 commit id、任务状态、下一步写进 CURRENT_STATE.md。
 
 明确禁止:改用户原话文档;未经确认改需求/架构/接口契约方向;硬编码事实/价格/链接/话术/临时数据/秘密;绕过接口契约;改任务未授权的文件;把推测当确认需求推进;直接采用支线输出而不做合流门禁。
 
-停止条件(命中就停下报告,不许猜着推进):偏离报告有新 RED;任务与原话或接口契约冲突;允许范围不足;需要新增未授权依赖;验收缺失或测试跑不了;必须先改需求或架构;支线返回 RED;支线结果无法验证;多个支线结果互相冲突且主线无法裁决。
+停止条件(命中就停下报告,不许猜着推进):CURRENT_STATE.md 显示目标文件被其它窗口锁定;用户未明确授权写入最终成果;偏离报告有新 RED;任务与原话或接口契约冲突;允许范围不足;需要新增未授权依赖;验收缺失或测试跑不了;必须先改需求或架构;支线返回 RED;支线结果无法验证;多个支线结果互相冲突且主线无法裁决。
 
 外层有 Codex App 每 30 分钟跑的独立审查代理盯着你跑偏,它只检测、把问题写进偏离报告,不替你修。它只看你**已提交**的改动,所以每个任务务必提交 + push。你照常干活,看到新 RED 就停。
 ```
